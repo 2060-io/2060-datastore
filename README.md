@@ -1,4 +1,6 @@
-# 2060-data-store Project
+# 2060-datastore
+
+A simple datastore for PoCs
 
 Customizable opts:
 
@@ -51,10 +53,6 @@ Update
 Delete
 1. call /d/{uuid}?{token}
 
-
-## docker-compose example
-
-check docker-compose directory
 
 ## Running the application in dev mode
 
