@@ -10,6 +10,7 @@ on:
 env:
   QUARKUS_CONTAINER_IMAGE_USERNAME: ${{ secrets.DOCKER_HUB_LOGIN }}
   QUARKUS_CONTAINER_IMAGE_PASSWORD: ${{ secrets.DOCKER_HUB_PWD }}
+  IMAGE_NAME: 'data-store'
 
 jobs:
   build:
@@ -17,6 +18,43 @@ jobs:
     steps:
       - name: Checkout gh-repo
         uses: actions/checkout@v3
+      
+      - name: Setup Helm
+        uses: azure/setup-helm@v3
+
+      - uses: codfish/semantic-release-action@v3
+        id: semantic
+        with:
+          branches: |
+            [
+              'release',
+              { 
+                name: 'main',
+                prerelease: 'dev'
+              }
+            ]
+          plugins: |
+            [
+              [
+                "@semantic-release/commit-analyzer",
+                {
+                  "preset": "angular",
+                  "releaseRules": [
+                    {
+                      "type": "refactor",
+                      "release": "patch"
+                    }
+                  ]
+                }
+              ],
+              [
+                "@semantic-release/npm",
+                {
+                  "npmPublish": false
+                }
+              ],
+              "@semantic-release/release-notes-generator",
+            ]
 
       - name: Set up JDK 17
         uses: actions/setup-java@v3
@@ -29,3 +67,16 @@ jobs:
         run: |
           ./mvnw package -B -Dquarkus.container-image.tag=${GITHUB_REF##*/}
           docker image ls
+
+      - name: Log in to Docker Hub Helm Registry
+        if: steps.semantic.outputs.new-release-published == 'true'
+        run: |
+          echo "$DH_TOKEN" | helm registry login -u "$DH_USERNAME" --password-stdin docker.io
+
+      - name: Push Helm chart to Docker Hub OCI repo
+        if: steps.semantic.outputs.new-release-published == 'true'
+        run: |
+          sed -i "s/^version:.*/version: $RELEASE_VERSION/" ./charts/Chart.yaml
+          helm dependency update ./charts
+          helm package ./charts -d ./charts
+          helm push ./charts/$IMAGE_NAME-$RELEASE_VERSION.tgz oci://docker.io/$DH_USERNAME
