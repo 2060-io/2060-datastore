@@ -1,9 +1,5 @@
-# Flag to indicate if the chart should create the Namespace.
-# Set to false if the Namespace already exists.
-createNamespace: false
-
-namespace:
-  name: default
+global:
+  domain: example.io # Global domain for the application
 
 # Service configuration
 service:
@@ -19,10 +15,7 @@ statefulset:
   replicas: 1
   container:
     name: data-store-container
-    image:
-      repository: io2060/2060-datastore
-      tag: "main"
-      pullPolicy: Always
+    pullPolicy: Always
     storage: 1Gi
     resources:
       requests:
@@ -50,10 +43,7 @@ env:
 # Environment variables for app-check-proxy
 appCheckProxy:
   name: app-check-proxy-container-data-store
-  image:
-    repository: io2060/app-check-proxy
-    tag: "dev"
-    pullPolicy: Always
+  pullPolicy: Always
   env:
     APP_PORT: "3100"
     FIREBASE_CFG_FILE: "/config/firebase-cfg.json"
@@ -64,5 +54,5 @@ appCheckProxy:
 # Ingress configuration
 ingress:
   name: data-store
-  host: ds.example.io
-  tlsSecret: ds.example.io-cert
+  host: ds.{{ .Values.global.domain }}
+  tlsSecret: ds.{{ .Values.global.domain }}

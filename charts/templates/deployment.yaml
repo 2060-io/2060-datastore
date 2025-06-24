@@ -3,7 +3,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ .Values.service.name }}
-  namespace: {{ .Values.namespace.name }}
+  namespace: {{ .Release.Namespace }}
 spec:
   selector:
     app: {{ .Values.app.name }}
@@ -23,7 +23,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ .Values.ingress.name }}
-  namespace: {{ .Values.namespace.name }}
+  namespace: {{ .Release.Namespace }}
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/proxy-body-size: 15m
@@ -32,10 +32,11 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - {{ .Values.ingress.host }}
-      secretName: {{ .Values.ingress.tlsSecret }}
+    - hosts:
+        - {{ tpl .Values.ingress.host . }}
+      secretName: {{ tpl .Values.ingress.tlsSecret . }}
   rules:
-    - host: {{ .Values.ingress.host }}
+    - host: {{ tpl .Values.ingress.host . }}
       http:
         paths:
           - path: /
@@ -58,7 +59,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: app-check-proxy-data-store
-  namespace: {{ .Values.namespace.name }}
+  namespace: {{ .Release.Namespace }}
 data:
   ENDPOINT_URLS: |
     [
@@ -76,7 +77,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: {{ .Values.statefulset.name }}
-  namespace: {{ .Values.namespace.name }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: {{ .Values.app.name }}
 spec:
@@ -92,8 +93,8 @@ spec:
     spec:
       containers:
         - name: {{ .Values.statefulset.container.name }}
-          image: "{{ .Values.statefulset.container.image.repository }}:{{ .Values.statefulset.container.image.tag }}"
-          imagePullPolicy: {{ .Values.statefulset.container.image.pullPolicy }}
+          image: io2060/2060-datastore:main
+          imagePullPolicy: {{ .Values.statefulset.container.pullPolicy }}
           resources:
             requests:
               cpu: {{ .Values.statefulset.container.resources.requests.cpu | quote }}
@@ -122,10 +123,10 @@ spec:
             - name: data-store-wallet-pv-dev
               mountPath: /home/data
         - name: {{ .Values.appCheckProxy.name }}
-          image: "{{ .Values.appCheckProxy.image.repository }}:{{ .Values.appCheckProxy.image.tag }}"
+          image: io2060/app-check-proxy:v1.0.0
           securityContext:
             readOnlyRootFilesystem: false
-          imagePullPolicy: {{ .Values.appCheckProxy.image.pullPolicy }}
+          imagePullPolicy: {{ .Values.appCheckProxy.pullPolicy }}
           env:
             - name: APP_PORT
               value: "{{ .Values.appCheckProxy.env.APP_PORT }}"

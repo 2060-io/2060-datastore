@@ -38,8 +38,6 @@ helm install --dry-run --debug <release-name> ./charts --namespace <your-namespa
 
 ### 4️⃣ Install the Chart
 
-If the target namespace already exists, ensure `createNamespace` is set to `false` in `values.yaml`. Otherwise, set it to `tru\` to have Helm create the namespace automatically.
-
 ```bash
 helm install <release-name> ./charts --namespace <your-namespace>
 ```
