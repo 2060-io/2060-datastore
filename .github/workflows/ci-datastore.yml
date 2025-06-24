@@ -64,6 +64,7 @@ jobs:
           cache: maven
         
       - name: Build
+        if: steps.semantic.outputs.new-release-published == 'true'
         run: |
           ./mvnw package -B -Dquarkus.container-image.tag=v${RELEASE_VERSION}
           docker image ls
