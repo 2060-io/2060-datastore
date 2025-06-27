@@ -1,0 +1,58 @@
+global:
+  domain: example.io # Global domain for the application
+
+# Service configuration
+service:
+  name: data-store
+
+# Application name used in labels
+app:
+  name: data-store
+
+# StatefulSet configuration
+statefulset:
+  name: data-store
+  replicas: 1
+  container:
+    name: data-store-container
+    pullPolicy: Always
+    storage: 1Gi
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "256Mi"
+      limits:
+        cpu: "400m"
+        memory: "512Mi"
+
+# Persistence
+persistence: 
+  storage: 1Gi
+  existingClaim: "data-store-wallet-pv-dev-data-store-0" #use existing PVC only use when work 1 instance
+
+# Environment variables for data-store
+env:
+  DEBUG: "1"
+  QUARKUS_HTTP_PORT: "8080"
+  IO_TWENTYSIXTY_DATASTORE_TMP_DIR: "/tmp/tmp"
+  IO_TWENTYSIXTY_DATASTORE_TMP_LIFETIMEDAYS: "5"
+  IO_TWENTYSIXTY_DATASTORE_REPO_LIFETIMEDAYS: "90"
+  IO_TWENTYSIXTY_DATASTORE_REPO_FS_DIR: "/home/data/repo"
+  IO_TWENTYSIXTY_DATASTORE_MEDIA_MAXCHUNKS: "128"
+
+# Environment variables for app-check-proxy
+appCheckProxy:
+  name: app-check-proxy-container-data-store
+  pullPolicy: Always
+  env:
+    APP_PORT: "3100"
+    FIREBASE_CFG_FILE: "/config/firebase-cfg.json"
+  configMap:
+    name: app-check-proxy-data-store
+    key: ENDPOINT_URLS
+
+# Ingress configuration
+ingress:
+  name: data-store
+  host: ds.{{ .Values.global.domain }}
+  tlsSecret: ds.{{ .Values.global.domain }}
