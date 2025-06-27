@@ -92,7 +92,7 @@ spec:
     spec:
       containers:
         - name: {{ .Values.statefulset.container.name }}
-          image: io2060/2060-datastore:{{ .Chart.Version }}
+          image: io2060/data-store:{{ .Chart.Version }}
           imagePullPolicy: {{ .Values.statefulset.container.pullPolicy }}
           resources:
             requests:
