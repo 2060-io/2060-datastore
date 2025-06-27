@@ -1,6 +1,6 @@
 ## A basic GitHub Actions workflow for your Quarkus application.
 
-name: CI build datastore
+name: CD build datastore
 
 on:
   push:
@@ -16,44 +16,31 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout gh-repo
+      - name: Checkout repo
         uses: actions/checkout@v3
-      
+
       - name: Setup Helm
         uses: azure/setup-helm@v3
 
-      - uses: codfish/semantic-release-action@v3
+      - name: Semantic Release
+        uses: codfish/semantic-release-action@v3
         id: semantic
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           branches: |
             [
               'release',
-              { 
-                name: 'main',
-                prerelease: 'dev'
-              }
+              { "name": "main", "prerelease": "dev" }
             ]
           plugins: |
             [
               [
                 "@semantic-release/commit-analyzer",
-                {
-                  "preset": "angular",
-                  "releaseRules": [
-                    {
-                      "type": "refactor",
-                      "release": "patch"
-                    }
-                  ]
-                }
-              ],
-              [
-                "@semantic-release/npm",
-                {
-                  "npmPublish": false
-                }
+                { "preset": "angular", "releaseRules": [ { "type": "refactor", "release": "patch" } ] }
               ],
               "@semantic-release/release-notes-generator",
+              "@semantic-release/github"
             ]
 
       - name: Set up JDK 17
@@ -62,24 +49,24 @@ jobs:
           java-version: 17
           distribution: temurin
           cache: maven
-        
-      - name: Build
+
+      - name: Build and tag Docker image
         if: steps.semantic.outputs.new-release-published == 'true'
         run: |
-          /mvnw package -B \
-            -Dquarkus.container-image.tag=v${RELEASE_VERSION} \
-            -Dquarkus.container-image.name=${IMAGE_NAME}
+          ./mvnw package -B \
+            -Dquarkus.container-image.tag=v${{ steps.semantic.outputs.release-version }} \
+            -Dquarkus.container-image.name=${{ env.IMAGE_NAME }}
           docker image ls
 
-      - name: Log in to Docker Hub Helm Registry
+      - name: Log in to Docker Hub (OCI)
         if: steps.semantic.outputs.new-release-published == 'true'
         run: |
-          echo "$DH_TOKEN" | helm registry login -u "$DH_USERNAME" --password-stdin docker.io
+          echo "${{ env.QUARKUS_CONTAINER_IMAGE_PASSWORD }}" | helm registry login -u "${{ env.QUARKUS_CONTAINER_IMAGE_USERNAME }}" --password-stdin docker.io
 
       - name: Push Helm chart to Docker Hub OCI repo
         if: steps.semantic.outputs.new-release-published == 'true'
         run: |
-          sed -i "s/^version:.*/version: v$RELEASE_VERSION/" ./charts/Chart.yaml
+          sed -i "s/^version:.*/version: v${{ steps.semantic.outputs.release-version }}/" ./charts/Chart.yaml
           helm dependency update ./charts
           helm package ./charts -d ./charts
-          helm push ./charts/$IMAGE_NAME-v$RELEASE_VERSION.tgz oci://docker.io/$DH_USERNAME
+          helm push ./charts/${{ env.IMAGE_NAME }}-v${{ steps.semantic.outputs.release-version }}.tgz oci://docker.io/${{ env.QUARKUS_CONTAINER_IMAGE_USERNAME }}
