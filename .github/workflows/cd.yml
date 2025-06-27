@@ -56,9 +56,23 @@ jobs:
           ./mvnw package -B \
             -Dquarkus.container-image.tag=v${{ steps.semantic.outputs.release-version }} \
             -Dquarkus.container-image.name=${{ env.IMAGE_NAME }}
+          docker image tag ${env.IMAGE_NAME}:v${{ steps.semantic.outputs.release-version }} \
+            ${env.QUARKUS_CONTAINER_IMAGE_USERNAME}/${env.IMAGE_NAME}:v${{ steps.semantic.outputs.release-version }}
           docker image ls
 
-      - name: Log in to Docker Hub (OCI)
+      - name: Log in to Docker Hub (Docker images)
+        if: steps.semantic.outputs.new-release-published == 'true'
+        uses: docker/login-action@v2
+        with:
+          username: ${{ env.QUARKUS_CONTAINER_IMAGE_USERNAME }}
+          password: ${{ env.QUARKUS_CONTAINER_IMAGE_PASSWORD }}
+
+      - name: Push Docker image to Docker Hub
+        if: steps.semantic.outputs.new-release-published == 'true'
+        run: |
+          docker push ${QUARKUS_CONTAINER_IMAGE_USERNAME}/${IMAGE_NAME}:v${{ steps.semantic.outputs.release-version }}
+
+      - name: Log in to Docker Hub (Helm OCI)
         if: steps.semantic.outputs.new-release-published == 'true'
         run: |
           echo "${{ env.QUARKUS_CONTAINER_IMAGE_PASSWORD }}" | helm registry login -u "${{ env.QUARKUS_CONTAINER_IMAGE_USERNAME }}" --password-stdin docker.io
@@ -67,6 +81,7 @@ jobs:
         if: steps.semantic.outputs.new-release-published == 'true'
         run: |
           sed -i "s/^version:.*/version: v${{ steps.semantic.outputs.release-version }}/" ./charts/Chart.yaml
+          CHART_NAME=$(grep '^name:' ./charts/Chart.yaml | awk '{print $2}')
           helm dependency update ./charts
           helm package ./charts -d ./charts
-          helm push ./charts/${{ env.IMAGE_NAME }}-v${{ steps.semantic.outputs.release-version }}.tgz oci://docker.io/${{ env.QUARKUS_CONTAINER_IMAGE_USERNAME }}
+          helm push ./charts/$CHART_NAME-v${{ steps.semantic.outputs.release-version }}.tgz oci://docker.io/${{ env.QUARKUS_CONTAINER_IMAGE_USERNAME }}
