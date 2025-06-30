@@ -8,8 +8,8 @@ on:
   workflow_dispatch:
 
 env:
-  QUARKUS_CONTAINER_IMAGE_USERNAME: ${{ secrets.DOCKER_HUB_LOGIN }}
-  QUARKUS_CONTAINER_IMAGE_PASSWORD: ${{ secrets.DOCKER_HUB_PWD }}
+  DH_USERNAME: ${{secrets.DOCKER_HUB_LOGIN}}
+  DH_TOKEN: ${{secrets.DOCKER_HUB_PWD}}
   IMAGE_NAME: 'data-store'
 
 jobs:
@@ -18,7 +18,7 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
-
+      
       - name: Setup Helm
         uses: azure/setup-helm@v3
 
@@ -50,38 +50,31 @@ jobs:
           distribution: temurin
           cache: maven
 
+      - name: Docker login
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_LOGIN }}
+          password: ${{ secrets.DOCKER_HUB_PWD }}
+        
       - name: Build and tag Docker image
         if: steps.semantic.outputs.new-release-published == 'true'
         run: |
           ./mvnw package -B \
-            -Dquarkus.container-image.tag=v${{ steps.semantic.outputs.release-version }} \
-            -Dquarkus.container-image.name=${{ env.IMAGE_NAME }}
-          docker image tag ${env.IMAGE_NAME}:v${{ steps.semantic.outputs.release-version }} \
-            ${env.QUARKUS_CONTAINER_IMAGE_USERNAME}/${env.IMAGE_NAME}:v${{ steps.semantic.outputs.release-version }}
+            -Dquarkus.container-image.tag=v${RELEASE_VERSION} \
+            -Dquarkus.container-image.name=${IMAGE_NAME} \
+            -Dquarkus.container-image.push=true
           docker image ls
 
-      - name: Log in to Docker Hub (Docker images)
-        if: steps.semantic.outputs.new-release-published == 'true'
-        uses: docker/login-action@v2
-        with:
-          username: ${{ env.QUARKUS_CONTAINER_IMAGE_USERNAME }}
-          password: ${{ env.QUARKUS_CONTAINER_IMAGE_PASSWORD }}
-
-      - name: Push Docker image to Docker Hub
+      - name: Log in to Docker Hub Helm Registry
         if: steps.semantic.outputs.new-release-published == 'true'
         run: |
-          docker push ${QUARKUS_CONTAINER_IMAGE_USERNAME}/${IMAGE_NAME}:v${{ steps.semantic.outputs.release-version }}
-
-      - name: Log in to Docker Hub (Helm OCI)
-        if: steps.semantic.outputs.new-release-published == 'true'
-        run: |
-          echo "${{ env.QUARKUS_CONTAINER_IMAGE_PASSWORD }}" | helm registry login -u "${{ env.QUARKUS_CONTAINER_IMAGE_USERNAME }}" --password-stdin docker.io
+          echo "$DH_TOKEN" | helm registry login -u "$DH_USERNAME" --password-stdin docker.io
 
       - name: Push Helm chart to Docker Hub OCI repo
         if: steps.semantic.outputs.new-release-published == 'true'
         run: |
-          sed -i "s/^version:.*/version: v${{ steps.semantic.outputs.release-version }}/" ./charts/Chart.yaml
+          sed -i "s/^version:.*/version: v$RELEASE_VERSION/" ./charts/Chart.yaml
           CHART_NAME=$(grep '^name:' ./charts/Chart.yaml | awk '{print $2}')
           helm dependency update ./charts
           helm package ./charts -d ./charts
-          helm push ./charts/$CHART_NAME-v${{ steps.semantic.outputs.release-version }}.tgz oci://docker.io/${{ env.QUARKUS_CONTAINER_IMAGE_USERNAME }}
+          helm push ./charts/$CHART_NAME-v$RELEASE_VERSION.tgz oci://docker.io/$DH_USERNAME
