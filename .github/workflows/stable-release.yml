@@ -35,7 +35,6 @@ jobs:
           /mvnw package -B \
             -Dquarkus.container-image.tag=${{steps.get_version.outputs.version}} \
             -Dquarkus.container-image.name=${IMAGE_NAME}
-          docker image ls
 
       - name: Log in to Docker Hub Helm Registry
         if: steps.get_version.outputs.is-semver == 'true'

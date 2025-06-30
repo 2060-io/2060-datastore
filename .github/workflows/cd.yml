@@ -8,8 +8,10 @@ on:
   workflow_dispatch:
 
 env:
-  DH_USERNAME: ${{secrets.DOCKER_HUB_LOGIN}}
-  DH_TOKEN: ${{secrets.DOCKER_HUB_PWD}}
+  QUARKUS_CONTAINER_IMAGE_USERNAME: ${{ secrets.DOCKER_HUB_LOGIN }}
+  QUARKUS_CONTAINER_IMAGE_PASSWORD: ${{ secrets.DOCKER_HUB_PWD }}
+  DH_USERNAME: ${{ secrets.DOCKER_HUB_LOGIN }}
+  DH_TOKEN: ${{ secrets.DOCKER_HUB_PWD }}
   IMAGE_NAME: 'data-store'
 
 jobs:
@@ -49,13 +51,6 @@ jobs:
           java-version: 17
           distribution: temurin
           cache: maven
-
-      - name: Docker login
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_HUB_LOGIN }}
-          password: ${{ secrets.DOCKER_HUB_PWD }}
-        
       - name: Build and tag Docker image
         if: steps.semantic.outputs.new-release-published == 'true'
         run: |
