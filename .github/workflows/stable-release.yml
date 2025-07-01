@@ -32,9 +32,10 @@ jobs:
       - name: Build
         if: steps.get_version.outputs.is-semver == 'true'
         run: |
-          /mvnw package -B \
+          ./mvnw package -B \
             -Dquarkus.container-image.tag=${{steps.get_version.outputs.version}} \
-            -Dquarkus.container-image.name=${IMAGE_NAME}
+            -Dquarkus.container-image.name=${IMAGE_NAME} \
+            -Dquarkus.container-image.push=true
 
       - name: Log in to Docker Hub Helm Registry
         if: steps.get_version.outputs.is-semver == 'true'
