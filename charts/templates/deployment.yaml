@@ -64,11 +64,11 @@ data:
     [
       {
         "pattern": "/c/.*",
-        "baseUrl": "http://data-store.{{ .Values.global.domain }}:8080"
+        "baseUrl": "http://data-store.{{ .Release.Namespace }}:8080"
       },
       {
         "pattern": "/u/.*",
-        "baseUrl": "http://data-store.{{ .Values.global.domain }}:8080"
+        "baseUrl": "http://data-store.{{ .Release.Namespace }}:8080"
       }
     ]
 ---
