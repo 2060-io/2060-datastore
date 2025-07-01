@@ -7,6 +7,8 @@ on:
 env:
   QUARKUS_CONTAINER_IMAGE_USERNAME: ${{ secrets.DOCKER_HUB_LOGIN }}
   QUARKUS_CONTAINER_IMAGE_PASSWORD: ${{ secrets.DOCKER_HUB_PWD }}
+  DH_USERNAME: ${{ secrets.DOCKER_HUB_LOGIN }}
+  DH_TOKEN: ${{ secrets.DOCKER_HUB_PWD }}  
   IMAGE_NAME: 'data-store'
 
 jobs:
